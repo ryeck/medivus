@@ -30,7 +30,16 @@ class Site(commands.Cog):
     self.bot = bot
 
   @commands.command()
+  async def hunted(self, ctx, option, *, name):
+    option = option.lower()
+    if option == "add":
+      pass
+
+
+
+  @commands.command()
   async def online(self, ctx, world : str = None):
+    print(ctx.guild.id)
     if world == None:
       worlds = medivia.get_player_count()
       e = get_embed("Online")
@@ -72,15 +81,18 @@ class Site(commands.Cog):
       await msg.add_reaction(l_e)
       await msg.add_reaction(r_e)
       await msg.add_reaction(e_e)
+
+      def check(reaction, user):
+        return reaction.message.id == msg.id and user != self.bot.user
       
       while True:
         try:
-          reaction, user = await self.bot.wait_for("reaction_add", timeout=30)
+          reaction, user = await self.bot.wait_for("reaction_add", check=check, timeout=30)
           emoji = reaction.emoji
         except asyncio.TimeoutError:
           emoji = None
           user = None
-        if user != self.bot.user:
+        else:
           if emoji == f_e:
             i = 0
             await msg.remove_reaction(f_e, user)
@@ -160,14 +172,17 @@ class Site(commands.Cog):
       await msg.add_reaction(k_e)
       await msg.add_reaction(t_e)
 
+      def check(reaction, user):
+        return reaction.message.id == msg.id and user != self.bot.user
+      
       while True:
         try:
-          reaction, user = await self.bot.wait_for("reaction_add", timeout=30)
+          reaction, user = await self.bot.wait_for("reaction_add", check=check, timeout=30)
           emoji = reaction.emoji
         except asyncio.TimeoutError:
           emoji = None
           user = None
-        if user != self.bot.user:
+        else:
           if emoji == o_e:
             await msg.remove_reaction(o_e, user)
             await msg.edit(embed=o)

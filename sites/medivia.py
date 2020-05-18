@@ -127,5 +127,13 @@ def get_online(world):
   chars.pop(0)
   return chars
 
+def get_all_online():
+  chars = get_online("Legacy")
+  chars.append(get_online("Pendulum"))
+  chars.append(get_online("Destiny"))
+  chars.append(get_online("Prophecy"))
+  chars.append(get_online("Unity"))
+  return chars
+
 if __name__ == "__main__":
   cs = get_online("pendulum")
