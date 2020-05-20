@@ -1,6 +1,7 @@
 import asyncio
 import typing
 import discord
+import db
 from discord.ext import commands
 from sites import medivia
 
@@ -30,11 +31,15 @@ class Site(commands.Cog):
     self.bot = bot
 
   @commands.command()
-  async def hunted(self, ctx, option, *, name):
-    option = option.lower()
-    if option == "add":
-      pass
-
+  async def hunted(self, ctx, option : str = None, *, name : str = None):
+    if option is not None:
+      option = option.lower()
+    if option is None:
+      chars = db.get_hunted(ctx.guild.id)
+      for c in chars:
+        print(c[0])
+    elif option == "add":
+      db.add_hunted(ctx.guild.id, name)
 
 
   @commands.command()

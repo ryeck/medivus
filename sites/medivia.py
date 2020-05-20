@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -129,10 +130,10 @@ def get_online(world):
 
 def get_all_online():
   chars = get_online("Legacy")
-  chars.append(get_online("Pendulum"))
-  chars.append(get_online("Destiny"))
-  chars.append(get_online("Prophecy"))
-  chars.append(get_online("Unity"))
+  chars.extend(get_online("Pendulum"))
+  chars.extend(get_online("Destiny"))
+  chars.extend(get_online("Prophecy"))
+  chars.extend(get_online("Unity"))
   return chars
 
 if __name__ == "__main__":
