@@ -111,7 +111,7 @@ def get_player_count():
 def get_online(world):
   r = requests.get(f"{url}/community/online/{world}")
   s = BeautifulSoup(r.text, "html.parser")
-  chars = []
+  chars = {}
   for li in s.find_all("ul")[1].find_all("li"):
     c = Character()
     div = li.find_next("div")
@@ -124,17 +124,19 @@ def get_online(world):
     c.level = div.text
     name = str(c.name).replace(" ", "%20")
     c.url = f"{url}/community/character/{name}"
-    chars.append(c)
-  chars.pop(0)
+    chars[c.name.lower()] = c
+  chars.pop("name", None)
   return chars
 
 def get_all_online():
   chars = get_online("Legacy")
-  chars.extend(get_online("Pendulum"))
-  chars.extend(get_online("Destiny"))
-  chars.extend(get_online("Prophecy"))
-  chars.extend(get_online("Unity"))
+  chars.update(get_online("Pendulum"))
+  chars.update(get_online("Destiny"))
+  chars.update(get_online("Prophecy"))
+  chars.update(get_online("Unity"))
   return chars
 
 if __name__ == "__main__":
-  cs = get_online("pendulum")
+  chars = get_online("pendulum")
+  for c in chars.values():
+    print(c.level)

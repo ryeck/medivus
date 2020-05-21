@@ -7,22 +7,30 @@ password = "postgres"
 
 conn = psycopg2.connect(host=host, database=database, user=user, password=password)
 
-def insert(func):
+def update(func):
   def wrapper(*args, **kwargs):
     try:
       cur = conn.cursor()
-      cur.execute(func(*args, **kwargs))
+      query, args = func(*args, **kwargs)
+      cur.execute(query, args)
       conn.commit()
       cur.close()
+      if cur.rowcount > 0:
+        return True
+      else:
+        return False
     except Exception as e:
+      # add log error
       print(e) 
+      return None 
   return wrapper
 
 def select(func):
   def wrapper(*args, **kwargs):
     try:
       cur = conn.cursor()
-      cur.execute(func(*args, **kwargs))
+      query, args = func(*args, **kwargs)
+      cur.execute(query, args)
       return cur.fetchall()
     except Exception as e:
       print(e) 
@@ -34,13 +42,61 @@ def print_tables():
   for t in cur.fetchall():
     print(t)
 
-@insert
+
+# hunted list
+@update
 def add_hunted(guild, name):
-  return f"INSERT INTO hunted (guild, name) VALUES ({guild}, '{name}')"
+  return "INSERT INTO hunted (guild, name) VALUES (%s, LOWER(%s)) ON CONFLICT DO NOTHING", (guild, name)
+
+@update
+def remove_hunted(guild, name):
+  return "DELETE FROM hunted WHERE guild = %s and name = %s", (guild, name)
 
 @select
 def get_hunted(guild):
-  return f"SELECT name FROM hunted WHERE guild = {guild}"
+  return f"SELECT name FROM hunted WHERE guild = %s", (guild,)
+
+@select
+def get_all_hunted():
+  return f"SELECT name, guild FROM hunted"
+
+
+# team list
+@update
+def add_team(guild, name):
+  return "INSERT INTO team (guild, name) VALUES (%s, LOWER(%s)) ON CONFLICT DO NOTHING", (guild, name)
+
+@update
+def remove_team(guild, name):
+  return "DELETE FROM team WHERE guild = %s and name = %s", (guild, name)
+
+@select
+def get_team(guild):
+  return "SELECT name FROM team WHERE guild = %s", (guild,)
+
+@select
+def get_all_team():
+  return f"SELECT name, guild FROM team"
+
+
+#noob list
+@update
+def add_noob(guild, name):
+  return "INSERT INTO noob (guild, name) VALUES (%s, LOWER(%s)) ON CONFLICT DO NOTHING", (guild, name)
+
+@update
+def remove_noob(guild, name):
+  return "DELETE FROM noob WHERE guild = %s and name = %s", (guild, name)
+
+@select
+def get_noob(guild):
+  return "SELECT name FROM noob WHERE guild = %s", (guild,)
+
+@select
+def get_all_noob():
+  return f"SELECT name, guild FROM noob"
+
+
 
 if __name__ == "__main__":
-  add_hunted(12345, "test")
+  pass

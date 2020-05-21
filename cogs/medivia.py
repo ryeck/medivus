@@ -1,34 +1,17 @@
 import asyncio
 import typing
 import discord
+import operator
 import db
+import helper
 from discord.ext import commands
 from sites import medivia
 
-def green(str):
-  return f"```css\n{str}```"
-
-def orange(str):
-  return f"```fix\n{str}```"
-
-def blue(str):
-  return f"```css\n.{str}```"
-
-def red(str):
-  return f"```diff\n-{str}```"
-
-def bold(str):
-  return f"**{str}**"
-
-def get_embed(title):
-  e = discord.Embed(title=title, color=discord.Color.blue())
-  e.set_footer(text="Signed, King Medivus")
-  return e
-
-class Site(commands.Cog):
+class Medivia(commands.Cog):
 
   def __init__(self, bot):
     self.bot = bot
+
 
   @commands.command()
   async def hunted(self, ctx, option : str = None, *, name : str = None):
@@ -39,32 +22,62 @@ class Site(commands.Cog):
       for c in chars:
         print(c[0])
     elif option == "add":
-      db.add_hunted(ctx.guild.id, name)
+      await self.send_add_response(ctx, db.add_hunted(ctx.guild.id, name), name, "Hunted List")
+    elif option == "remove":
+      await self.send_remove_response(ctx, db.remove_hunted(ctx.guild.id, name), name, "Hunted List")
+
+  async def send_add_response(self, ctx, added, name, title):
+    e = helper.get_embed(title)
+    if added is None:
+      msg = f"Unexpected error adding {name}."
+      desc = helper.red("Error")
+    elif added:
+      msg = f"{name} added."
+      desc = helper.green("Success")
+    elif not added:
+      msg = f"{name} already added."
+      desc = helper.orange("Failed")
+    e.add_field(name="message:", value=msg)
+    e.description = desc
+    await ctx.send(embed=e)
+
+  async def send_remove_response(self, ctx, removed, name, title):
+    e = helper.get_embed(title)
+    if removed is None:
+      msg = f"Unexpected error removing {name}."
+      desc = helper.red("Error")
+    elif removed:
+      msg = f"{name} removed."
+      desc = helper.green("Success")
+    elif not removed:
+      msg = f"{name} already removed."
+      desc = helper.orange("Failed")
+    e.add_field(name="message:", value=msg)
+    e.description = desc
+    await ctx.send(embed=e)
 
 
   @commands.command()
   async def online(self, ctx, world : str = None):
-    print(ctx.guild.id)
     if world == None:
       worlds = medivia.get_player_count()
-      e = get_embed("Online")
+      e = helper.get_embed("Online")
       for k, v in worlds.items():
         e.add_field(name=k.lower() + ":", value=v)
       await ctx.send(embed=e)
     else:
       embeds = []
       chars = medivia.get_online(world)
-      chars.sort(key=lambda c: int(c.level), reverse=True)
       name = ""
       prof = ""
       lvl = ""
-      for i in range(len(chars) - 1):
-        c = chars[i]
+      i = 0
+      for c in sorted(chars.values(), key=lambda o: int(o.level), reverse=True):
         name += f"[{c.name}]({c.url})\n"
         prof += c.profession + "\n"
         lvl += c.level + "\n"
         if i != 0 and i % 10 == 0:
-          e = get_embed("Online")
+          e = helper.get_embed("Online")
           e.description = world.title()
           e.add_field(name="name:", value=name)  
           e.add_field(name="profession:", value=prof)  
@@ -73,6 +86,7 @@ class Site(commands.Cog):
           name = ""
           prof = ""
           lvl = ""
+        i += 1
 
       i = 0 
       msg = await ctx.send(embed=embeds[i])
@@ -123,17 +137,17 @@ class Site(commands.Cog):
   async def character(self, ctx, *, name):
     c = medivia.get_character(name)
     if c.errMsg is not None:
-      e = get_embed(name) 
+      e = helper.get_embed(name) 
       e.url = c.url
       e.add_field(name="error:", value=c.errMsg)
       await ctx.send(embed=e)
     else:
-      o = get_embed(c.name)
+      o = helper.get_embed(c.name)
       o.url = c.url
       o.set_thumbnail(url=c.avatar)
-      status = green(c.status) if c.status == "Online" else orange(c.status)
+      status = helper.green(c.status) if c.status == "Online" else helper.orange(c.status)
       o.add_field(name="status:", value=status, inline=False)
-      o.add_field(name="level:", value=bold(c.level))
+      o.add_field(name="level:", value=helper.bold(c.level))
       o.add_field(name="profession:", value=c.profession)
       o.add_field(name="sex:", value=c.sex)
       o.add_field(name="world:", value=c.world)
@@ -147,19 +161,19 @@ class Site(commands.Cog):
         o.add_field(name="banishment:", value=c.banishment) 
       o.add_field(name="account status:", value=c.account_status)
       
-      d = get_embed(c.name)
+      d = helper.get_embed(c.name)
       d.url = c.url
       d.description = "Death list"
       for key, val in c.deaths.items():
         d.add_field(name=key, value=val, inline=False)
 
-      k = get_embed(c.name)
+      k = helper.get_embed(c.name)
       k.url = c.url
       k.description = "Kill list"
       for key, val in c.kills.items():
         k.add_field(name=key, value=val, inline=False)
 
-      t = get_embed(c.name)
+      t = helper.get_embed(c.name)
       t.url = c.url
       t.description = "Task list"
       for key, val in c.tasks.items():
@@ -202,4 +216,4 @@ class Site(commands.Cog):
             await msg.edit(embed=t)
 
 def setup(bot):
-  bot.add_cog(Site(bot))
+  bot.add_cog(Medivia(bot))
