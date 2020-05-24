@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import requests
+import aiohttp
 from bs4 import BeautifulSoup
 
 url = "https://medivia.online"
@@ -30,15 +31,21 @@ class Character:
     self.kills = {}
     self.tasks = {}
 
-def get_character(name):
+async def get_html(url):
+  async with aiohttp.ClientSession() as session:
+    async with session.get(url) as response:
+      html = await response.text()
+      return html
+
+async def get_character(name):
   c = Character()
   name = str(name).replace(" ", "%20")
   c.url = f"{url}/community/character/{name}"
-  r = requests.get(c.url)
-  s = BeautifulSoup(r.text, "html.parser")
+  html = await get_html(c.url)
+  s = BeautifulSoup(html, "html.parser")
 
   errMsg = "Sorry, but such character does not exist." 
-  if errMsg in r.text:
+  if errMsg in html:
     c.errMsg = errMsg
     return c 
 
@@ -97,9 +104,9 @@ def _get_dict(s, title):
       dic[k] = v
   return dic
 
-def get_player_count(): 
-  r = requests.get(url)
-  s = BeautifulSoup(r.text, "html.parser") 
+async def get_player_count(): 
+  html = await get_html(url)
+  s = BeautifulSoup(html, "html.parser") 
   online = {} 
   for d in s.find_all("div", class_="med-text-center"):
     txt = d.text.strip()
@@ -108,9 +115,10 @@ def get_player_count():
       online[k] = v
   return online 
 
-def get_online(world):
-  r = requests.get(f"{url}/community/online/{world}")
-  s = BeautifulSoup(r.text, "html.parser")
+async def get_online(world):
+  html = await get_html(f"{url}/community/online/{world}")
+  s = BeautifulSoup(html, "html.parser")
+
   chars = {}
   for li in s.find_all("ul")[1].find_all("li"):
     c = Character()
@@ -128,12 +136,12 @@ def get_online(world):
   chars.pop("name", None)
   return chars
 
-def get_all_online():
-  chars = get_online("Legacy")
-  chars.update(get_online("Pendulum"))
-  chars.update(get_online("Destiny"))
-  chars.update(get_online("Prophecy"))
-  chars.update(get_online("Unity"))
+async def get_all_online():
+  chars = await get_online("Legacy")
+  chars.update(await get_online("Pendulum"))
+  chars.update(await get_online("Destiny"))
+  chars.update(await get_online("Prophecy"))
+  chars.update(await get_online("Unity"))
   return chars
 
 if __name__ == "__main__":

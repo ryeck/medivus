@@ -60,14 +60,14 @@ class Medivia(commands.Cog):
   @commands.command()
   async def online(self, ctx, world : str = None):
     if world == None:
-      worlds = medivia.get_player_count()
+      worlds = await medivia.get_player_count()
       e = helper.get_embed("Online")
       for k, v in worlds.items():
         e.add_field(name=k.lower() + ":", value=v)
       await ctx.send(embed=e)
     else:
       embeds = []
-      chars = medivia.get_online(world)
+      chars = await medivia.get_online(world)
       name = ""
       prof = ""
       lvl = ""
@@ -135,7 +135,7 @@ class Medivia(commands.Cog):
 
   @commands.command(aliases=["char", "player", "profile"])
   async def character(self, ctx, *, name):
-    c = medivia.get_character(name)
+    c = await medivia.get_character(name)
     if c.errMsg is not None:
       e = helper.get_embed(name) 
       e.url = c.url

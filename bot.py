@@ -9,14 +9,14 @@ from sites import medivia
 TOKEN = os.getenv("DISCORD_TOKEN")
 
 channels = {}
-online = []
+online = {}
 
 bot = commands.Bot(command_prefix=".m ")
 
 @bot.event
 async def on_ready():
   get_channels.start()
-  #check_lists.start()
+  check_lists.start()
   print(f"{bot.user.name} has connected.")
 
 @bot.command(hidden=True)
@@ -53,20 +53,17 @@ async def get_channels():
 async def check_lists():
   global online
   global channels
-  new_online = medivia.get_all_online() 
+  new_online = await medivia.get_all_online()
   for g in bot.guilds:
-    for c in db.get_hunted(g.id):
+    hunted = db.get_hunted(g.id) 
+    for c in hunted:
       name = c[0].lower()
-      if len(online) > 0 and not any(o.name.lower() == name for o in online):
-        if any(o.name.lower() == name for o in new_online):
+      if len(online) > 0 and name not in online:
+        if name in new_online:
           if g.id in channels:
             await channels[g.id].send(f"{name} is online!")
-  print("bye")
-  online = medivia.get_all_online()
-
-
-
-
+  online = await medivia.get_all_online()
+  print("check lists")
 
 for f in os.listdir("./cogs"):
   if f.endswith(".py"):
