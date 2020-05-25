@@ -11,20 +11,108 @@ class Medivia(commands.Cog):
 
   def __init__(self, bot):
     self.bot = bot
+    self.channels = {}
+    self.online = {}
+    self.get_channels.start()
+    self.check_lists.start()
 
+  # task loops
+  @tasks.loop(minutes=5)
+  async def get_channels():
+    for g in bot.guilds:
+      found = False
+      for c in g.text_channels:
+        if c.name == "medivia":
+          channels[g.id] = c
+          found = True
+      if not found:
+        chan = await g.create_text_channel("medivia")
+        channels[g.id] = chan
+
+  @tasks.loop(seconds=60)
+  async def check_lists():
+    new_online = await medivia.get_all_online()
+    for g in bot.guilds:
+      hunted = db.get_hunted(g.id) 
+      for c in hunted:
+        name = c[0].lower()
+        if len(online) > 0 and name not in online:
+          if name in new_online:
+            if g.id in channels:
+              await channels[g.id].send(f"{name} is online!")
+    online = await medivia.get_all_online()
+    print("check lists")
 
   @commands.command()
   async def hunted(self, ctx, option : str = None, *, name : str = None):
+    title = "Hunted List"
     if option is not None:
       option = option.lower()
     if option is None:
-      chars = db.get_hunted(ctx.guild.id)
-      for c in chars:
-        print(c[0])
-    elif option == "add":
-      await self.send_add_response(ctx, db.add_hunted(ctx.guild.id, name), name, "Hunted List")
-    elif option == "remove":
-      await self.send_remove_response(ctx, db.remove_hunted(ctx.guild.id, name), name, "Hunted List")
+      await self.send_list(ctx, db.get_hunted(ctx.guild.id), title)
+    elif option in [ "add", "update" ]:
+      await self.send_add_response(ctx, db.add_hunted(ctx.guild.id, name), name, title)
+    elif option in [ "remove", "rm", "del", "delete" ]:
+      await self.send_remove_response(ctx, db.remove_hunted(ctx.guild.id, name), name, title)
+    else:
+      await self.send_error(ctx, option, title)
+
+  @commands.command()
+  async def noob(self, ctx, option : str = None, *, name : str = None):
+    title = "Noob List"
+    if option is not None:
+      option = option.lower()
+    if option is None:
+      await self.send_list(ctx, db.get_noob(ctx.guild.id), title)
+    elif option in [ "add", "update" ]:
+      await self.send_add_response(ctx, db.add_noob(ctx.guild.id, name), name, title)
+    elif option in [ "remove", "rm", "del", "delete" ]:
+      await self.send_remove_response(ctx, db.remove_noob(ctx.guild.id, name), name, title)
+    else:
+      await self.send_error(ctx, option, title)
+
+  @commands.command()
+  async def team(self, ctx, option : str = None, *, name : str = None):
+    title = "Team List"
+    if option is not None:
+      option = option.lower()
+    if option is None:
+      await self.send_list(ctx, db.get_team(ctx.guild.id), title)
+    elif option in [ "add", "update" ]:
+      await self.send_add_response(ctx, db.add_team(ctx.guild.id, name), name, title)
+    elif option in [ "remove", "rm", "del", "delete" ]:
+      await self.send_remove_response(ctx, db.remove_team(ctx.guild.id, name), name, title)
+    else:
+      await self.send_error(ctx, option, title)
+
+  async def send_list(self, ctx, rows, title):
+    l = len(rows)
+    if l == 0:
+      e = helper.get_embed(title)
+      e.description = helper.orange("Failed")
+      e.add_field(name="message:", value="No entries found.")
+      await ctx.send(embed=e)
+    else:
+      name = ""
+      embeds = []
+      i = 0
+      for r in rows:
+        nm = r[0]
+        url = medivia.get_char_url(nm)
+        name += f"[{nm}]({url})\n"
+        if (i != 0 and i % 10 == 0) or i == l - 1:
+          e = helper.get_embed(title)
+          e.add_field(name="name:", value=name)  
+          embeds.append(e)
+          name = ""
+        i += 1
+      await helper.paginate(ctx, embeds) 
+
+  async def send_error(self, ctx, option, title):
+    e = helper.get_embed(title)
+    e.description = helper.red("Error")
+    e.add_field(name="message:", value=f"'{option}' is not a valid command.")
+    await ctx.send(embed=e)
 
   async def send_add_response(self, ctx, added, name, title):
     e = helper.get_embed(title)
@@ -87,50 +175,7 @@ class Medivia(commands.Cog):
           prof = ""
           lvl = ""
         i += 1
-
-      i = 0 
-      msg = await ctx.send(embed=embeds[i])
-
-      f_e = "\u23ee"
-      l_e = "\u25c0"
-      r_e = "\u25b6"
-      e_e = "\u23ed"
-
-      await msg.add_reaction(f_e)
-      await msg.add_reaction(l_e)
-      await msg.add_reaction(r_e)
-      await msg.add_reaction(e_e)
-
-      def check(reaction, user):
-        return reaction.message.id == msg.id and user != self.bot.user
-      
-      while True:
-        try:
-          reaction, user = await self.bot.wait_for("reaction_add", check=check, timeout=30)
-          emoji = reaction.emoji
-        except asyncio.TimeoutError:
-          emoji = None
-          user = None
-        else:
-          if emoji == f_e:
-            i = 0
-            await msg.remove_reaction(f_e, user)
-            await msg.edit(embed=embeds[i])
-          elif emoji == l_e:
-            if i > 0:
-              i -= 1
-            await msg.remove_reaction(l_e, user)
-            await msg.edit(embed=embeds[i])
-          elif emoji == r_e:
-            if i < len(embeds) - 1:
-              i += 1
-            await msg.remove_reaction(r_e, user)
-            await msg.edit(embed=embeds[i])
-          elif emoji == e_e:
-            i = len(embeds) - 1
-            await msg.remove_reaction(e_e, user)
-            await msg.edit(embed=embeds[i])
-
+      await helper.paginate(ctx, embeds) 
 
 
   @commands.command(aliases=["char", "player", "profile"])

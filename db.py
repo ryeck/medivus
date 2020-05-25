@@ -79,7 +79,7 @@ def get_all_team():
   return f"SELECT name, guild FROM team"
 
 
-#noob list
+# noob list
 @update
 def add_noob(guild, name):
   return "INSERT INTO noob (guild, name) VALUES (%s, LOWER(%s)) ON CONFLICT DO NOTHING", (guild, name)
@@ -95,6 +95,22 @@ def get_noob(guild):
 @select
 def get_all_noob():
   return f"SELECT name, guild FROM noob"
+
+
+# login
+@update
+def add_login(name, date):
+  return "INSERT INTO login (name, date) VALUES (%s, %s)", (name, date)
+
+
+# logoff
+@update
+def add_logoff(name, date):
+  return "INSERT into logoff (name, date) VALUES (%s, %s)", (name, date)
+
+
+
+
 
 
 

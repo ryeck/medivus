@@ -37,10 +37,13 @@ async def get_html(url):
       html = await response.text()
       return html
 
+def get_char_url(name):
+  nm = str(name).replace(" ", "%20")
+  return f"{url}/community/character/{nm}"
+
 async def get_character(name):
   c = Character()
-  name = str(name).replace(" ", "%20")
-  c.url = f"{url}/community/character/{name}"
+  c.url = get_char_url(name) 
   html = await get_html(c.url)
   s = BeautifulSoup(html, "html.parser")
 
