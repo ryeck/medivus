@@ -4,7 +4,8 @@ import discord
 import operator
 import db
 import helper
-from discord.ext import commands
+import datetime
+from discord.ext import commands, tasks
 from sites import medivia
 
 class Medivia(commands.Cog):
@@ -17,31 +18,54 @@ class Medivia(commands.Cog):
     self.check_lists.start()
 
   # task loops
-  @tasks.loop(minutes=5)
-  async def get_channels():
-    for g in bot.guilds:
+  @tasks.loop(seconds=30)
+  async def get_channels(self):
+    for g in self.bot.guilds:
       found = False
       for c in g.text_channels:
         if c.name == "medivia":
-          channels[g.id] = c
+          self.channels[g.id] = c
           found = True
       if not found:
         chan = await g.create_text_channel("medivia")
-        channels[g.id] = chan
+        self.channels[g.id] = chan
 
-  @tasks.loop(seconds=60)
-  async def check_lists():
+  @tasks.loop(seconds=30)
+  async def check_lists(self):
     new_online = await medivia.get_all_online()
-    for g in bot.guilds:
-      hunted = db.get_hunted(g.id) 
-      for c in hunted:
-        name = c[0].lower()
-        if len(online) > 0 and name not in online:
-          if name in new_online:
-            if g.id in channels:
-              await channels[g.id].send(f"{name} is online!")
-    online = await medivia.get_all_online()
+    for g in self.bot.guilds:
+      await self.scan(g.id, db.get_hunted(g.id), new_online, "Hunted List", helper.red("Logged On"))
+      await self.scan(g.id, db.get_team(g.id), new_online, "Team List", helper.green("Logged On"))
+      await self.scan(g.id, db.get_noob(g.id), new_online, "Noob List", helper.orange("Logged On"))
+    dt = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    for k in new_online.keys():
+      if len(self.online) > 0 and k not in self.online:
+        db.add_login(k, dt)
+    for k in self.online.keys():
+      if len(new_online) > 0 and k not in new_online:
+        db.add_logoff(k, dt)
+    self.online = await medivia.get_all_online()
     print("check lists")
+
+  async def scan(self, gid, chars, new_online, title, desc):
+    logon = []
+    for c in chars:
+      name = c[0].lower()
+      if len(self.online) > 0 and name not in self.online:
+        if name in new_online:
+          logon.append(name) 
+    if len(logon) > 0:
+      if gid in self.channels:
+        e = helper.get_embed(title)
+        e.description = desc 
+        for nm in logon:
+          char = new_online[nm]
+          url = medivia.get_char_url(nm)
+          e.add_field(name="name:", value=f"[{char.name}]({url})")
+          e.add_field(name="profession:", value=char.profession)
+          e.add_field(name="level:", value=char.level)
+        await self.channels[gid].send(embed=e)
+
 
   @commands.command()
   async def hunted(self, ctx, option : str = None, *, name : str = None):
@@ -54,6 +78,8 @@ class Medivia(commands.Cog):
       await self.send_add_response(ctx, db.add_hunted(ctx.guild.id, name), name, title)
     elif option in [ "remove", "rm", "del", "delete" ]:
       await self.send_remove_response(ctx, db.remove_hunted(ctx.guild.id, name), name, title)
+    elif option == "online":
+      await self.send_online_list(ctx, db.get_hunted(ctx.guild.id), title, helper.red("Online"))
     else:
       await self.send_error(ctx, option, title)
 
@@ -85,6 +111,41 @@ class Medivia(commands.Cog):
     else:
       await self.send_error(ctx, option, title)
 
+  async def send_online_list(self, ctx, rows, title, desc):
+    l = len(rows)
+    if l == 0:
+      e = helper.get_embed(title)
+      e.description = helper.orange("Failed")
+      e.add_field(name="message:", value="No entries found.")
+      await ctx.send(embed=e)
+    else:
+      embeds = []
+      name = ""
+      prof = ""
+      lvl = ""
+      i = 0
+      for r in rows:
+        nm = r[0]
+        if nm in self.online:
+          c = self.online[nm]
+          name += f"[{c.name}]({c.url})\n"
+          prof += c.profession + "\n"
+          lvl += c.level + "\n"
+          if i != 0 and i % 10 == 0 or i == l - 1:
+            e = helper.get_embed(title)
+            e.description = desc 
+            e.add_field(name="name:", value=name)  
+            e.add_field(name="profession:", value=prof)  
+            e.add_field(name="level:", value=lvl)  
+            embeds.append(e)
+            name = ""
+            prof = ""
+            lvl = ""
+          i += 1
+    await helper.paginate(ctx, embeds) 
+
+
+  
   async def send_list(self, ctx, rows, title):
     l = len(rows)
     if l == 0:
