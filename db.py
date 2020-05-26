@@ -97,6 +97,24 @@ def get_all_noob():
   return f"SELECT name, guild FROM noob"
 
 
+# spawn list
+@update
+def add_spawn(guild, name):
+  return "INSERT INTO spawn (guild, name) VALUES (%s, LOWER(%s)) ON CONFLICT DO NOTHING", (guild, name)
+
+@update
+def remove_spawn(guild, name):
+  return "DELETE FROM spawn WHERE guild = %s and name = %s", (guild, name)
+
+@select
+def get_spawn(guild):
+  return "SELECT spawn FROM spawn WHERE guild = %s", (guild,)
+
+@select
+def get_all_spawn():
+  return f"SELECT name, guild FROM spawn"
+
+
 # login
 @update
 def add_login(name, date):

@@ -94,6 +94,8 @@ class Medivia(commands.Cog):
       await self.send_add_response(ctx, db.add_noob(ctx.guild.id, name), name, title)
     elif option in [ "remove", "rm", "del", "delete" ]:
       await self.send_remove_response(ctx, db.remove_noob(ctx.guild.id, name), name, title)
+    elif option == "online":
+      await self.send_online_list(ctx, db.get_noob(ctx.guild.id), title, helper.orange("Online"))
     else:
       await self.send_error(ctx, option, title)
 
@@ -108,6 +110,8 @@ class Medivia(commands.Cog):
       await self.send_add_response(ctx, db.add_team(ctx.guild.id, name), name, title)
     elif option in [ "remove", "rm", "del", "delete" ]:
       await self.send_remove_response(ctx, db.remove_team(ctx.guild.id, name), name, title)
+    elif option == "online":
+      await self.send_online_list(ctx, db.get_team(ctx.guild.id), title, helper.team("Online"))
     else:
       await self.send_error(ctx, option, title)
 
