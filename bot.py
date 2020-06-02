@@ -10,6 +10,7 @@ bot = commands.Bot(command_prefix=[".m ", "!m "])
 @bot.event
 async def on_ready():
   print(f"{bot.user.name} has connected.")
+  await bot.change_presence(status=discord.Status.online, activity=discord.Game("!m help"))
 
 @bot.command(hidden=True)
 async def load(ctx, extension):

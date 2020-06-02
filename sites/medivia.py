@@ -136,6 +136,8 @@ async def get_online(world):
     name = str(c.name).replace(" ", "%20")
     c.url = f"{url}/community/character/{name}"
     chars[c.name.lower()] = c
+    if not isinstance(c.level, int):
+      chars.pop(c.name, None)
   chars.pop("name", None)
   return chars
 

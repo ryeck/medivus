@@ -17,6 +17,13 @@ class Medivia(commands.Cog):
     self.get_channels.start()
     self.check_lists.start()
 
+  @commands.Cog.listener()
+  async def on_command_error(self, ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+      e = helper.get_embed("Error")
+      e.add_field(name="message:", value="Command does not exist!")
+      await ctx.send(embed=e)
+
   # task loops
   @tasks.loop(seconds=30)
   async def get_channels(self):
@@ -111,16 +118,17 @@ class Medivia(commands.Cog):
     elif option in [ "remove", "rm", "del", "delete" ]:
       await self.send_remove_response(ctx, db.remove_team(ctx.guild.id, name), name, title)
     elif option == "online":
-      await self.send_online_list(ctx, db.get_team(ctx.guild.id), title, helper.team("Online"))
+      await self.send_online_list(ctx, db.get_team(ctx.guild.id), title, helper.green("Online"))
     else:
       await self.send_error(ctx, option, title)
 
+  
   async def send_online_list(self, ctx, rows, title, desc):
     l = len(rows)
     if l == 0:
       e = helper.get_embed(title)
       e.description = helper.orange("Failed")
-      e.add_field(name="message:", value="No entries found.")
+      e.add_field(name="message:", value="No entries added to list.")
       await ctx.send(embed=e)
     else:
       embeds = []
@@ -146,10 +154,15 @@ class Medivia(commands.Cog):
             prof = ""
             lvl = ""
           i += 1
-    await helper.paginate(ctx, embeds) 
+    if len(embeds) == 0:
+      e = helper.get_embed(title)
+      e.description = desc
+      e.add_field(name="message:", value="Nobody online.")
+      await ctx.send(embed=e)
+    else:
+      await helper.paginate(ctx, embeds) 
 
 
-  
   async def send_list(self, ctx, rows, title):
     l = len(rows)
     if l == 0:
